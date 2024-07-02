@@ -29,7 +29,7 @@ function RegisterModal({ }) {
                 <div className="flex flex-col m-6 bg-white border-2 bg-opacity-50 shadow-md rounded-xl">
                     <p className="mt-8 text-xl font-bold text-gray-700 text-center">Register</p>
                     <form className="px-4 py-6">
-                        <div className="mb-8">
+                        <div className="mb-4">
                             <label htmlFor="email" className="block text-base font-medium text-gray-700">
                                 Email
                             </label>
