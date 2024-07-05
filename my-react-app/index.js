@@ -17,30 +17,42 @@ const authToken = (req, res, next) => {
     const token = req.headers['authorization'];
     if (!token) {
         return res.sendStatus(401);
-    } 
+    }
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) {
             return res.sendStatus(403);
-        } 
+        }
         req.user = user; // Attach the user information to the request object
     });
 };
 
 app.post('/register', async (req, res) => {
     const { email, password } = req.body; // Extract email and password from the request body
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash the password with a salt rounds of 10
     try {
+        const existingUser = await prisma.user.findUnique({
+            where: {
+                email,
+            },
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: {
                 email,
                 password: hashedPassword,
             },
-        }); 
-        res.status(201).json({ message: 'User created successfully' }); // Send success response
+        });
+
+        res.status(201).json({ message: 'User created successfully', user });
     } catch (error) {
-        res.status(400).json({ message: 'User already exists' }); // Send error response if user already exists
+        console.error('Error creating user:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
-});
+}
+);
 
 app.post('/login', async (req, res) => {
     const { email, password } = req.body; // Extract email and password from the request body
@@ -78,7 +90,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     try {
         await prisma.note.delete({
             where: {
-                id: id, 
+                id: id,
             },
         });
         res.status(204).send(); // Send 204 No Content if successful
