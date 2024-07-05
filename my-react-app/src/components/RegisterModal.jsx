@@ -1,49 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
 import { FaCircleXmark } from "react-icons/fa6";
 import { VscCheck } from "react-icons/vsc";
-
+import { useNavigate } from 'react-router-dom';
 
 
 function RegisterModal({ }) {
-    const [isOpen, setIsOpen] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [message, setMessage] = useState("");
     const [open_fill, setOpenFill] = useState(false);
+    const navigate = useNavigate();
 
-    const updateIsOpen = () => {
-        const screenWidth = window.innerWidth;
-        const breakpoint = 840;
-        setIsOpen(screenWidth >= breakpoint)
-    }
-
-    useEffect(() => {
-        updateIsOpen();
-
-        const handleResize = () => {
-            updateIsOpen(); // Update isOpen on window resize
-        };
-
-        window.addEventListener('resize', handleResize); // Add event listener for window resize
-
-        return () => {
-            window.removeEventListener('resize', handleResize); // Clean up event listener on component unmount
-        };
-    }, []);
+    const signUpClick = () => {
+        setTimeout(() => {
+            setOpenFill(true);
+        }, 500); // 1 second delay
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (password !== confirmPassword) {
+        if (email == "") {
+            setMessage("Please fill the email correctly.");
+            console.log(message)
+            return;
+        }
+        else if (password.length < 5) {
+            setMessage('Password must be at \n least 5 characters.');
+            return;
+        }
+
+        else if (password !== confirmPassword) {
             setMessage('Passwords do not match.');
             return;
         }
         try {
             const response = await axios.post('http://localhost:8000/register', { email, password });
             setMessage("Created successfully!");
-            return;
+            setTimeout(() => {
+                navigate("/login");
+            }, 1200);
 
         } catch (error) {
             setMessage(error.response.data.message);
@@ -51,7 +49,6 @@ function RegisterModal({ }) {
             return;
         }
     };
-
 
     return (
         <div className='fixed inset-0 flex justify-center items-center z-10'>
@@ -70,7 +67,6 @@ function RegisterModal({ }) {
                                 placeholder="Enter your email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                required
                             />
                         </div>
                         <div className="mb-4">
@@ -84,7 +80,6 @@ function RegisterModal({ }) {
                                 placeholder="Enter your password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                required
                             />
                         </div>
                         <div className='mb-12'>
@@ -98,12 +93,11 @@ function RegisterModal({ }) {
                                 placeholder='Confirm your password'
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
                             />
                         </div>
                         <button
                             type="submit"
-                            onClick={() => setOpenFill(true)}
+                            onClick={signUpClick}
                             className="mb-6 w-full py-2 px-4 border border-transparent rounded-md bg-stone-900 px-6 rounded-md text-white font-semibold hover:text-black hover:bg-white transform hover:scale-102 duration-500 shadow-md"
                         >
                             Sign Up
@@ -113,20 +107,13 @@ function RegisterModal({ }) {
                             <a className='text-base text-center hover:underline font-bold text-gray-700 cursor-pointer'>Login</a>
                         </div>
                     </form>
-                    {message !== "Created successfully!" && <Modal open={open_fill} isFill={true} onClose={() => setOpenFill(false)} >
+                    <Modal open={open_fill} isFill={true} onClose={() => setOpenFill(false)} >
                         <div className="flex justify-center">
-                            <FaCircleXmark size={108} className='text-red-500 absolute top-7 ' />
-                            <p className="text-xl font-semibold absolute bottom-20">{message}</p>
+                            {message !== "Created successfully!" ? (<FaCircleXmark size={108} className='text-red-500 absolute top-7 '/>) : <VscCheck size={108} className='text-red-500 absolute top-7 ' />}
+                            <p className="text-xl font-semibold mt-10">{message}</p>
                             <button className='absolute bottom-4 left-26 border-2 border-solid bg-stone-900 p-2 px-6 rounded-md text-white font-semibold hover:text-black hover:bg-white transform hover:scale-110 duration-500 shadow-md'>OK</button>
                         </div>
-                    </Modal>}
-                    {message === "Created successfully!" && <Modal open={open_fill} isFill={true} onClose={() => setOpenFill(false)} >
-                        <div className="flex justify-center">
-                            <VscCheck size={108} className='text-red-500 absolute top-7 ' />
-                            <p className="text-xl font-semibold absolute bottom-20">{message}</p>
-                            <button className='absolute bottom-4 left-26 border-2 border-solid bg-stone-900 p-2 px-6 rounded-md text-white font-semibold hover:text-black hover:bg-white transform hover:scale-110 duration-500 shadow-md'>OK</button>
-                        </div>
-                    </Modal>}
+                    </Modal>
                 </div>
             </div>
         </div>

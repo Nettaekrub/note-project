@@ -13,8 +13,10 @@ app.use(express.json());
 app.use(cors());
 
 // Middleware to authenticate token
+
 const authToken = (req, res, next) => {
-    const token = req.headers['authorization'];
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
         return res.sendStatus(401);
     }
@@ -22,8 +24,9 @@ const authToken = (req, res, next) => {
         if (err) {
             return res.sendStatus(403);
         }
-        req.user = user; // Attach the user information to the request object
+        req.user = user;
     });
+    next();
 };
 
 app.post('/register', async (req, res) => {
@@ -54,6 +57,32 @@ app.post('/register', async (req, res) => {
 }
 );
 
+app.get('/api/users', authToken, async (req, res) => {
+    try {
+        const userId = req.user.userId; // Assuming you store user ID in the JWT payload
+
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId // Assuming userId is stored in the req.user object
+            },
+            select: {
+                email: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).send({ message: 'User not found' });
+        }
+
+        // Send the user's email in the response
+        res.send({ email: user.email });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: 'Server error' });
+    }
+})
+
 app.post('/login', async (req, res) => {
     const { email, password } = req.body; // Extract email and password from the request body
     const user = await prisma.user.findUnique({ where: { email } }); // Find the user by email
@@ -63,7 +92,7 @@ app.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, SECRET_KEY, { expiresIn: '1h' });
-    res.json({ token });
+    res.json({ token, email: user.email });
 });
 
 

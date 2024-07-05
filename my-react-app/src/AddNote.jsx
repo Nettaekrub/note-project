@@ -136,7 +136,7 @@ function AddNote() {
                 <Modal open={open_fill} isFill={true} onClose={() => setOpenFill(false)} >
                     <div className="flex justify-center">
                         <FaCircleXmark size={108} className='text-red-500 absolute top-7 ' />
-                        <p className="text-xl font-semibold absolute bottom-20">Fill the title and note correctly.</p>
+                        <p className="text-xl font-semibold mt-10">Fill the title and note correctly.</p>
                         <button className='absolute bottom-4 left-26 border-2 border-solid bg-stone-900 p-2 px-6 rounded-md text-white font-semibold hover:text-black hover:bg-white transform hover:scale-110 duration-500 shadow-md'>OK</button>
                     </div>
                 </Modal>
@@ -158,7 +158,7 @@ function AddNote() {
                             />
                             <textarea className='absolute top-28 border-2 px-2 w-5/6 rounded-md shadow-md hover:bg-gray-100 duration-700 cursor-pointer focus:border-transparent focus:outline-none h-60 sm:h-80' 
                                 style={{ resize: 'none' }}
-                                value={editContent}
+                                value={editContent} 
                                 onChange={handleEditNote}
                             />
                             <button onClick={() => setOpenEdit(false)} className='absolute bottom-8 right-36 md:right-40 border-2 border-solid bg-stone-900 p-3 px-6 rounded-md text-white font-semibold hover:text-black hover:bg-white transform hover:scale-110 duration-500 shadow-md'>Cancel</button>
