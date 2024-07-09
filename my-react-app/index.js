@@ -3,16 +3,27 @@ import cors from 'cors'; //http req
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import session from 'express-session';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+// import nodemailer from 'nodemailer'; // transport to email
+// import crypto from 'crypto'; // random token
 
 const app = express();
 const port = 8000;
 const prisma = new PrismaClient();
 const SECRET_KEY = '886725';
 
+{/* const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: 'your-email@gmail.com',
+        pass: 'your-email-password',
+    },
+}); */}
+
 app.use(express.json());
 app.use(cors());
-
-// Middleware to authenticate token
 
 const authToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -28,9 +39,73 @@ const authToken = (req, res, next) => {
     });
     next();
 };
+/// *** GOOGLE LOGIN PART ***////////
+app.use(session({
+    secret: 'your-session-secret',
+    resave: false,
+    saveUninitialized: true
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => {
+    done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+    done(null, obj);
+});
+
+passport.use(new GoogleStrategy({
+    clientID: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL: 'http://localhost:8000/auth/google/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const email = profile.emails[0].value.toLowerCase();
+        const existingUser = await prisma.user.findUnique({
+            where: {
+                email,
+            },
+        });
+
+        if (existingUser) {
+            return done(null, existingUser);
+        }
+        const hashedPassword = await bcrypt.hash(profile.id, 10);
+        const user = await prisma.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+            },
+        });
+        return done(null, user);
+
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
+}));
+
+app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/' }),
+    (req, res) => {
+        const token = jwt.sign({ userId: req.user.id }, SECRET_KEY, { expiresIn: '1h' });
+        res.redirect(`http://127.0.0.1:5173/?token=${token}`); // Redirect to your profile page or wherever you want
+    }
+    
+);
+
+///// ******* GOOGLE LOGIN ****** ////////
 
 app.post('/register', async (req, res) => {
-    const { email, password } = req.body; // Extract email and password from the request body
+    let { email, password } = req.body; // Extract email and password from the request body
+    email = email.toLowerCase()
     try {
         const existingUser = await prisma.user.findUnique({
             where: {
@@ -95,6 +170,70 @@ app.post('/login', async (req, res) => {
     res.json({ token, email: user.email });
 });
 
+{/* app.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const token = crypto.randomBytes(32).toString('hex'); //generate random token
+        const expires = new Date(Date.now() + 3600000); // Token expires in 1 hour
+
+        await prisma.user.update({
+            where: { email },
+            data: { resetPasswordToken: token, resetPasswordExpires: expires },
+        });
+
+        const resetUrl = `http://localhost:8000/reset-password/${token}`;
+        const mailOptions = {
+            to: email,
+            from: 'your-email@gmail.com',
+            subject: 'Password Reset Request',
+            text: `You requested a password reset. Click this link to reset your password: ${resetUrl}`,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ message: 'Password reset link sent' });
+    } catch (error) {
+        console.error('Error requesting password reset:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+app.post('/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    try {
+        const user = await prisma.user.findFirst({
+            where: {
+                resetPasswordToken: token,
+                resetPasswordExpires: { gt: new Date() }, // Check if token is not expired
+            },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await prisma.user.update({
+            where: { email: user.email },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,
+                resetPasswordExpires: null,
+            },
+        });
+
+        res.json({ message: 'Password reset successful' });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}); */}
 
 app.get('/api/notes', async (req, res) => {
     try {
